@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bluemvmt | Interactive Partner Portal</title>
+    <!-- Tailwind CSS for modern design components -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js for data visualization -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- FontAwesome for crisp UI indicators -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: #f8fafc; 
+            color: #0f172a; 
+        }
+
+        h1, h2, h3, .brand-font {
+            font-family: 'Space Grotesk', sans-serif;
+        }
+
+        /* Chart container constraint rules to prevent resizing blowouts */
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 40vh;
+            max-height: 320px;
+        }
+
+        @media (min-width: 768px) {
+            .chart-container { height: 320px; }
+        }
+
+        /* Navigation tab indicators */
+        .tab-btn.active { 
+            border-bottom: 2px solid #2563eb; 
+            color: #2563eb; 
+            font-weight: 600; 
+        }
+
+        /* Component micro-interactions */
+        .comp-card {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .comp-card:hover { 
+            transform: translateY(-4px); 
+            box-shadow: 0 12px 20px -3px rgba(37, 99, 235, 0.08); 
+        }
+
+        .tech-node { 
+            transition: all 0.3s ease; 
+        }
+        .tech-node:hover { 
+            background-color: #eff6ff; 
+            border-color: #3b82f6; 
+        }
+
+        /* Glassmorphism utility */
+        .glass {
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+    </style>
+</head>
+<body class="antialiased selection:bg-blue-200 selection:text-blue-900 min-h-screen flex flex-col justify-between">
+
+    <!-- Secure gateway layer: Visible by default if not authenticated in SessionStorage -->
+    <div id="login-screen" class="fixed inset-0 z-[9999] flex items-center justify-center bg-[#030712] transition-opacity duration-500">
+        <!-- Abstract atmospheric background decorations -->
+        <div class="absolute inset-0 overflow-hidden pointer-events-none">
+            <div class="absolute -top-[40%] -right-[30%] w-[80vw] h-[80vw] rounded-full bg-blue-900/10 blur-[120px]"></div>
+            <div class="absolute -bottom-[40%] -left-[30%] w-[80vw] h-[80vw] rounded-full bg-cyan-950/20 blur-[120px]"></div>
+        </div>
+
+        <div class="w-full max-w-md mx-4 relative">
+            <div class="glass p-8 rounded-2xl shadow-2xl flex flex-col text-center">
+                
+                <!-- Primary login logo representation utilizing BMLogoWhite.png with exact size constraint -->
+                <div class="mb-8">
+                    <img id="login-brand-logo" src="BMLogoWhite.png" alt="Bluemvmt Logo" class="h-10 mx-auto object-contain" 
+                         onerror="this.src='https://placehold.co/240x60/0a1931/ffffff?text=bluemvmt'">
+                </div>
+
+                <div class="mb-6">
+                    <span class="inline-block px-3 py-1 bg-blue-500/10 text-blue-400 rounded-full text-xs font-semibold tracking-wide uppercase">
+                        Secure Partner Portal
+                    </span>
+                    <h2 class="text-2xl font-bold text-white mt-3">Enter Passcode</h2>
+                    <p class="text-slate-400 text-sm mt-2">Access prepared materials for Adam Draper & Boost VC</p>
+                </div>
+
+                <form id="login-form" onsubmit="handleLoginSubmit(event)" class="space-y-4">
+                    <div>
+                        <label for="pwd" class="sr-only">Password</label>
+                        <input type="password" id="pwd" name="pwd" required
+                               placeholder="Enter passcode..." 
+                               class="w-full px-4 py-3 bg-slate-900/90 border border-slate-700/80 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-center tracking-widest text-lg font-bold">
+                    </div>
+                    
+                    <!-- Secure message center replacing basic alert calls -->
+                    <div id="login-error" class="hidden text-red-400 text-sm font-semibold py-2 px-3 bg-red-500/10 rounded-lg border border-red-500/20"></div>
+
+                    <button type="submit" 
+                            class="w-full py-3 px-4 bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-700 hover:to-cyan-600 text-white font-bold rounded-xl shadow-lg hover:shadow-blue-500/20 transition-all focus:outline-none transform hover:-translate-y-0.5">
+                        <i class="fa-solid fa-shield-halved mr-2"></i> Unlock Presentation
+                    </button>
+                </form>
+
+                <div class="mt-8 text-xs text-slate-500 border-t border-slate-800/80 pt-4">
+                    Authorized use only. Session resets automatically.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Content wrapper: Standard layout hidden dynamically until auth check confirms pass -->
+    <div id="main-app" class="hidden flex-1 flex flex-col justify-between">
+
+        <!-- Fixed header incorporating BMLogo_2.png for clean light theme validation -->
+        <nav class="fixed top-0 w-full bg-white/95 backdrop-blur-md border-b border-slate-200 z-50">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between h-16 items-center">
+                    
+                    <!-- Integrated dynamic corporate image logo with verbatim fallback support -->
+                    <div class="flex-shrink-0 flex items-center">
+                        <img src="BMLogo_2.png" alt="Bluemvmt Logo" class="h-8 w-auto object-contain"
+                             onerror="this.src='https://placehold.co/120x30/ffffff/0f172a?text=bluemvmt'">
+                    </div>
+
+                    <div class="hidden md:flex space-x-8">
+                        <a href="#problem" class="text-slate-600 hover:text-blue-600 px-3 py-2 text-sm font-medium transition-colors">The Problem</a>
+                        <a href="#tech" class="text-slate-600 hover:text-blue-600 px-3 py-2 text-sm font-medium transition-colors">Sci-Fi Tech</a>
+                        <a href="#wedge" class="text-slate-600 hover:text-blue-600 px-3 py-2 text-sm font-medium transition-colors">The Wedge</a>
+                        <a href="#metrics" class="text-slate-600 hover:text-blue-600 px-3 py-2 text-sm font-medium transition-colors">Scale & TAM</a>
+                    </div>
+                    
+                    <div class="flex items-center gap-4">
+                        <button onclick="handleLogout()" class="text-slate-500 hover:text-red-600 text-sm font-semibold transition-colors">
+                            <i class="fa-solid fa-power-off"></i>
+                        </button>
+                        <a href="#metrics" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm">
+                            View Projections
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <main class="pt-24 pb-12 flex-1">
+            
+            <section id="hero" class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
+                <div class="inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-semibold tracking-wide uppercase mb-8">
+                    <i class="fa-solid fa-cube mr-1"></i> Prepared for Adam Draper • Boost VC
+                </div>
+                
+                <!-- Secondary structured brand space specifically preserved as requested -->
+                <div class="mb-8 p-4 border border-dashed border-slate-200 rounded-xl max-w-sm mx-auto flex flex-col items-center justify-center bg-white/50">
+                    <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-2">Corporate Brand Verification</p>
+                    <img src="BMLogo_2.png" alt="Bluemvmt Identity" class="h-7 object-contain"
+                         onerror="this.src='https://placehold.co/120x30/ffffff/0f172a?text=bluemvmt'">
+                </div>
+
+                <h1 class="text-5xl md:text-7xl font-extrabold text-slate-900 tracking-tight mb-6">
+                    All Your Data.<br>
+                    <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-cyan-500">One Conversation Away.</span>
+                </h1>
+                
+                <p class="mt-4 text-xl text-slate-600 max-w-3xl mx-auto leading-relaxed">
+                    We solve unmapped subsea complexity by unifying isolated datasets inside a high-fidelity 3D simulation environment.
+                </p>
+                
+                <div class="mt-10 flex justify-center gap-4">
+                    <a href="#tech" class="bg-slate-900 text-white px-8 py-3 rounded-xl font-semibold hover:bg-slate-800 transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5 transform">
+                        Explore the Tech
+                    </a>
+                </div>
+            </section>
+
+            <section id="problem" class="max-w-6xl mx-auto px-4 py-16">
+                <div class="mb-12 text-center">
+                    <h2 class="text-3xl font-bold text-slate-900">The Problem: Subsea Data Fragmentation</h2>
+                    <p class="mt-4 text-slate-600 max-w-2xl mx-auto">The global ocean space is crippled by latency and isolated silos. Remote instrumentation cannot communicate natively.</p>
+                </div>
+                
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
+                    <div class="flex flex-col md:flex-row justify-between items-center gap-8">
+                        
+                        <!-- Physical Data Origins -->
+                        <div class="flex flex-col gap-4 w-full md:w-1/3">
+                            <div class="p-4 bg-slate-50 border border-slate-200 rounded-xl text-center font-semibold text-slate-700 shadow-sm flex items-center justify-center gap-2">
+                                <span>🛰️</span> Satellites (GOES, GNSS)
+                            </div>
+                            <div class="p-4 bg-slate-50 border border-slate-200 rounded-xl text-center font-semibold text-slate-700 shadow-sm flex items-center justify-center gap-2">
+                                <span>🚁</span> Drones (UAVs, LiDAR)
+                            </div>
+                            <div class="p-4 bg-slate-50 border border-slate-200 rounded-xl text-center font-semibold text-slate-700 shadow-sm flex items-center justify-center gap-2">
+                                <span>🤖</span> AUVs (Gliders, ROVs)
+                            </div>
+                            <div class="p-4 bg-slate-50 border border-slate-200 rounded-xl text-center font-semibold text-slate-700 shadow-sm flex items-center justify-center gap-2">
+                                <span>📡</span> Sonar Acoustical Arrays
+                            </div>
+                        </div>
+
+                        <!-- Directional indicator -->
+                        <div class="flex-shrink-0 text-4xl text-slate-300 transform rotate-90 md:rotate-0">
+                            <i class="fa-solid fa-arrow-right-long animate-pulse"></i>
+                        </div>
+
+                        <!-- Bottleneck visualizer -->
+                        <div class="w-full md:w-1/3 text-center">
+                            <div class="p-6 bg-red-50 border border-red-200 rounded-2xl shadow-sm">
+                                <h3 class="text-xl font-bold text-red-700 mb-3 flex items-center justify-center gap-2">
+                                    <i class="fa-solid fa-triangle-exclamation"></i> The Bottleneck
+                                </h3>
+                                <ul class="text-sm text-red-600 space-y-2.5 text-left list-disc list-inside font-medium">
+                                    <li>Proprietary Cloud Lock-in</li>
+                                    <li>Complex Manual Interoperability</li>
+                                    <li>Astronomical Setup Overhead</li>
+                                    <li>No Native 3D Simulation Engine</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="tech" class="bg-slate-900 py-20 mt-12 rounded-3xl mx-4 sm:mx-8">
+                <div class="max-w-6xl mx-auto px-4">
+                    <div class="mb-12 text-center">
+                        <span class="text-xs font-bold text-blue-400 uppercase tracking-widest bg-blue-900/30 px-3 py-1 rounded-full">Frontier Architecture</span>
+                        <h2 class="text-3xl font-bold text-white mt-4">The Solution: Deep Tech Engine</h2>
+                        <p class="mt-4 text-slate-400 max-w-2xl mx-auto">Providing the "sci-fi" solution by deploying an advanced, browser-based physical-world twin framework.</p>
+                    </div>
+
+                    <div class="flex flex-col lg:flex-row gap-8">
+                        <div class="w-full lg:w-1/3 flex flex-col gap-3">
+                            <button class="tab-btn active text-left px-6 py-5 rounded-xl text-white hover:bg-slate-800/80 transition-all focus:outline-none flex flex-col" data-target="tab-udf">
+                                <div class="font-bold text-lg flex items-center gap-2">
+                                    <span class="text-blue-500">01.</span> Unified Data Fabric
+                                </div>
+                                <div class="text-xs text-slate-400 font-normal mt-1 ml-6">High-speed, schema-agnostic ocean storage pipelines.</div>
+                            </button>
+                            <button class="tab-btn text-left px-6 py-5 rounded-xl text-slate-400 hover:bg-slate-800/80 transition-all focus:outline-none flex flex-col" data-target="tab-rag">
+                                <div class="font-bold text-lg flex items-center gap-2">
+                                    <span class="text-blue-500">02.</span> RAG & Model Context Protocols
+                                </div>
+                                <div class="text-xs text-slate-400 font-normal mt-1 ml-6">Intelligent multimodal agents linking search to analysis.</div>
+                            </button>
+                            <button class="tab-btn text-left px-6 py-5 rounded-xl text-slate-400 hover:bg-slate-800/80 transition-all focus:outline-none flex flex-col" data-target="tab-holo">
+                                <div class="font-bold text-lg flex items-center gap-2">
+                                    <span class="text-blue-500">03.</span> HoloOcean Physics Sim
+                                </div>
+                                <div class="text-xs text-slate-400 font-normal mt-1 ml-6">Photorealistic Unreal Engine subsea digital twins.</div>
+                            </button>
+                        </div>
+
+                        <div class="w-full lg:w-2/3 bg-slate-800/50 rounded-2xl p-8 border border-slate-700/60 min-h-[320px] flex items-center">
+                            <div id="tab-udf" class="tab-content text-white w-full">
+                                <div class="text-4xl mb-4 text-blue-500"><i class="fa-solid fa-database"></i></div>
+                                <h3 class="text-2xl font-bold mb-4">Unified Data Fabric (UDF)</h3>
+                                <p class="text-slate-300 mb-6 leading-relaxed">Hosts petabyte-scale bathymetric data pipelines without standard cloud egress fees. Standardizes unstructured telemetry for downstream scientific, defense, and research algorithms instantly.</p>
+                                <ul class="space-y-2 text-slate-400 text-sm">
+                                    <li class="flex items-center gap-2"><i class="fa-solid fa-circle-check text-blue-500"></i> Seamless data versioning at storage layers</li>
+                                    <li class="flex items-center gap-2"><i class="fa-solid fa-circle-check text-blue-500"></i> Scalable multi-cloud data integration nodes</li>
+                                </ul>
+                            </div>
+                            
+                            <div id="tab-rag" class="tab-content hidden text-white w-full">
+                                <div class="text-4xl mb-4 text-blue-500"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
+                                <h3 class="text-2xl font-bold mb-4">MCP & Generative AI Sidecars</h3>
+                                <p class="text-slate-300 mb-6 leading-relaxed">Converts conversational prompts directly into structured database queries, spawning isolated, tenant-specific compute clusters close to the data repository on-demand.</p>
+                                <ul class="space-y-2 text-slate-400 text-sm">
+                                    <li class="flex items-center gap-2"><i class="fa-solid fa-circle-check text-blue-500"></i> Direct Model Context Protocol (MCP) telemetry</li>
+                                    <li class="flex items-center gap-2"><i class="fa-solid fa-circle-check text-blue-500"></i> Dynamic runtime code sandbox orchestration</li>
+                                </ul>
+                            </div>
+
+                            <div id="tab-holo" class="tab-content hidden text-white w-full">
+                                <div class="text-4xl mb-4 text-blue-500"><i class="fa-solid fa-ship"></i></div>
+                                <h3 class="text-2xl font-bold mb-4">HoloOcean Digital Twinning</h3>
+                                <p class="text-slate-300 mb-6 leading-relaxed">Integrates real-time Unreal Engine 5 physics directly within standard client browsers. Allows defense agencies and researchers to virtualize missions, modeling subsea environments with zero hardware investment.</p>
+                                <ul class="space-y-2 text-slate-400 text-sm">
+                                    <li class="flex items-center gap-2"><i class="fa-solid fa-circle-check text-blue-500"></i> High-fidelity virtual acoustical testing models</li>
+                                    <li class="flex items-center gap-2"><i class="fa-solid fa-circle-check text-blue-500"></i> Accelerates algorithm testing pipelines by 95%</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="wedge" class="max-w-6xl mx-auto px-4 py-20">
+                <div class="mb-12 text-center">
+                    <h2 class="text-3xl font-bold text-slate-900">The Wedge: Deep Infrastructure Dominance</h2>
+                    <p class="mt-4 text-slate-600 max-w-2xl mx-auto">Unlike competitors who provide static, restrictive APIs, Bluemvmt operates as the persistent data container and simulation engine.</p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="comp-card bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm cursor-pointer" onclick="highlightWedge('compute')">
+                        <div class="text-xs font-bold text-blue-600 uppercase tracking-wide mb-2"><i class="fa-solid fa-microchip mr-1"></i> vs. Compute Only</div>
+                        <h3 class="text-xl font-bold text-slate-900 mb-2">The Persistence Wedge</h3>
+                        <p class="text-slate-600 text-sm leading-relaxed">Others rent raw computing heat. Bluemvmt hosts, structures, and protects sensitive datasets natively, establishing permanent data gravity.</p>
+                    </div>
+
+                    <div class="comp-card bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm cursor-pointer" onclick="highlightWedge('notebook')">
+                        <div class="text-xs font-bold text-blue-600 uppercase tracking-wide mb-2"><i class="fa-solid fa-code-commit mr-1"></i> vs. standard notebooks</div>
+                        <h3 class="text-xl font-bold text-slate-900 mb-2">The Scaling Wedge</h3>
+                        <p class="text-slate-600 text-sm leading-relaxed">Legacy analysis notebooks fail when executing high-fidelity physical simulations. Bluemvmt moves queries into instant GKE pods seamlessly.</p>
+                    </div>
+
+                    <div class="comp-card bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm cursor-pointer" onclick="highlightWedge('enterprise')">
+                        <div class="text-xs font-bold text-blue-600 uppercase tracking-wide mb-2"><i class="fa-solid fa-server mr-1"></i> vs. legacy mlops</div>
+                        <h3 class="text-xl font-bold text-slate-900 mb-2">The No-DevOps Wedge</h3>
+                        <p class="text-slate-600 text-sm leading-relaxed">Ditch the "Complexity Tax" of massive legacy providers. Bluemvmt standardizes GKE container logic, offering transparent, predictable usage pricing.</p>
+                    </div>
+
+                    <div class="comp-card bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm cursor-pointer" onclick="highlightWedge('tracking')">
+                        <div class="text-xs font-bold text-blue-600 uppercase tracking-wide mb-2"><i class="fa-solid fa-chart-line mr-1"></i> vs. tracking apps</div>
+                        <h3 class="text-xl font-bold text-slate-900 mb-2">The Simulation Wedge</h3>
+                        <p class="text-slate-600 text-sm leading-relaxed">Standard platforms catalog process logs. Bluemvmt actively executes real-time virtual sonar and acoustics modeling in physical space.</p>
+                    </div>
+                </div>
+                
+                <div id="wedge-insight" class="mt-8 p-6 bg-blue-50 border border-blue-200 rounded-xl text-center hidden transition-all duration-300">
+                    <p class="text-lg font-semibold text-blue-800" id="wedge-text">Click a card above to see the sales strategy.</p>
+                </div>
+            </section>
+
+            <section id="metrics" class="bg-slate-50 border-t border-slate-200 py-20 rounded-3xl mx-4 sm:mx-8">
+                <div class="max-w-6xl mx-auto px-4">
+                    <div class="mb-12 text-center">
+                        <h2 class="text-3xl font-bold text-slate-900">Capital Efficiency & Scale TAM</h2>
+                        <p class="mt-4 text-slate-600 max-w-2xl mx-auto">Vetted traction modeling 181% CAGR based on current Navy contracts and secure commercial subscriptions.</p>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                            <h3 class="text-base font-bold text-slate-800 mb-4 text-center">Net Revenue Projection (Compound CAGR 181%)</h3>
+                            <div class="chart-container">
+                                <canvas id="revenueChart"></canvas>
+                            </div>
+                            <div class="mt-4 text-center text-xs font-bold text-blue-700 bg-blue-50 py-3 px-2 rounded-lg">
+                                Target Milestone: End of FY 2027 • 436+ Subscribers • $3.9M ARR
+                            </div>
+                        </div>
+
+                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                            <h3 class="text-base font-bold text-slate-800 mb-4 text-center">Target Addressable Segments ($15.6B Total TAM)</h3>
+                            <div class="chart-container">
+                                <canvas id="marketChart"></canvas>
+                            </div>
+                            <p class="text-center text-[11px] text-slate-500 mt-4 leading-normal">
+                                Initial Serviceable Addressable Market (SAM) focuses on Ocean command defense divisions & academic research centers.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="pricing" class="max-w-6xl mx-auto px-4 py-20">
+                <div class="mb-12 text-center">
+                    <h2 class="text-3xl font-bold text-slate-900">Platform-as-a-Service Subscriptions</h2>
+                    <p class="mt-4 text-slate-600 max-w-2xl mx-auto">Hybrid consumption framework driving predictable recurring cashflows with high-margin sidecar compute limits.</p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch">
+                    <!-- Pro tier -->
+                    <div class="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                        <div>
+                            <h3 class="text-xl font-bold text-slate-900 mb-2">Pro Plan</h3>
+                            <div class="text-4xl font-extrabold text-slate-900 mb-6">$99<span class="text-base text-slate-500 font-normal">/month</span></div>
+                            <ul class="space-y-3.5 text-slate-600 text-sm mb-8">
+                                <li class="flex items-center gap-2"><i class="fa-solid fa-check text-blue-500"></i> Standard UDF Query Access</li>
+                                <li class="flex items-center gap-2"><i class="fa-solid fa-check text-blue-500"></i> Pro Agent Chat Tools</li>
+                                <li class="flex items-center gap-2"><i class="fa-solid fa-check text-blue-500"></i> Includes 1 Compute Sidecar</li>
+                                <li class="text-xs text-blue-600 font-bold ml-6">Actual ARPU with overage: $144/mo</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Team tier -->
+                    <div class="bg-slate-900 p-8 rounded-2xl border-2 border-blue-600 shadow-xl flex flex-col justify-between transform md:-translate-y-4 relative">
+                        <div class="absolute top-0 right-0 bg-blue-600 text-white text-[10px] font-extrabold px-3 py-1 rounded-bl-lg rounded-tr-xl uppercase tracking-wide">
+                            Optimized Growth
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-bold text-white mb-2">Collaborative Team</h3>
+                            <div class="text-4xl font-extrabold text-white mb-6">$299<span class="text-base text-slate-400 font-normal">/month</span></div>
+                            <ul class="space-y-3.5 text-slate-300 text-sm mb-8">
+                                <li class="flex items-center gap-2"><i class="fa-solid fa-check text-blue-400"></i> Real-time Team Collaboration</li>
+                                <li class="flex items-center gap-2"><i class="fa-solid fa-check text-blue-400"></i> Full Workspace Context Memory</li>
+                                <li class="flex items-center gap-2"><i class="fa-solid fa-check text-blue-400"></i> Includes 2 Compute Sidecars</li>
+                                <li class="text-xs text-blue-400 font-bold ml-6">Actual ARPU with overage: $379/mo</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Enterprise tier -->
+                    <div class="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                        <div>
+                            <h3 class="text-xl font-bold text-slate-900 mb-2">Custom Enterprise</h3>
+                            <div class="text-4xl font-extrabold text-slate-900 mb-6">$30k<span class="text-base text-slate-500 font-normal">/year</span></div>
+                            <ul class="space-y-3.5 text-slate-600 text-sm mb-8">
+                                <li class="flex items-center gap-2"><i class="fa-solid fa-check text-blue-500"></i> Dedicated Platform Governance</li>
+                                <li class="flex items-center gap-2"><i class="fa-solid fa-check text-blue-500"></i> Integrated HoloOcean Plugins</li>
+                                <li class="flex items-center gap-2"><i class="fa-solid fa-check text-blue-500"></i> 5 Sidecars + 3 Custom GKE Pods</li>
+                                <li class="text-xs text-blue-600 font-bold ml-6">Actual ARPU with overage: $34,800/yr</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+
+        <!-- Footer incorporating verbatim white logo image element for slate backdrop consistency -->
+        <footer class="bg-slate-900 py-10 border-t border-slate-800">
+            <div class="max-w-6xl mx-auto px-4 text-center">
+                <div class="flex justify-center items-center gap-2 mb-6">
+                    <img src="BMLogoWhite.png" alt="Bluemvmt Logo" class="h-6 w-auto object-contain"
+                         onerror="this.src='https://placehold.co/120x30/0f172a/ffffff?text=bluemvmt'">
+                </div>
+                <p class="text-slate-500 text-xs">
+                    © Copyright 2026 Bluemvmt Inc. All Rights Reserved. Confidential presentation to Boost VC.
+                </p>
+            </div>
+        </footer>
+
+    </div>
+
+    <script>
+        // Security gatekeeper functions checking local and session values safely
+        document.addEventListener("DOMContentLoaded", function() {
+            const authStatus = sessionStorage.getItem("bm_authenticated");
+            if (authStatus === "true") {
+                revealApplication();
+            } else {
+                // Keep login screen displayed
+                document.getElementById('login-screen').classList.remove('hidden');
+                document.getElementById('main-app').classList.add('hidden');
+            }
+        });
+
+        function handleLoginSubmit(event) {
+            event.preventDefault();
+            const passwordInput = document.getElementById('pwd').value;
+            const errorBox = document.getElementById('login-error');
+            
+            // Required password validation logic
+            if (passwordInput === "Blue4You") {
+                sessionStorage.setItem("bm_authenticated", "true");
+                errorBox.classList.add('hidden');
+                revealApplication();
+            } else {
+                errorBox.innerText = "Access Denied. Passcode incorrect.";
+                errorBox.classList.remove('hidden');
+                document.getElementById('pwd').value = "";
+            }
+        }
+
+        function revealApplication() {
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('main-app').classList.remove('hidden');
+            
+            // Intialize standard analytical metrics only after DOM layers are revealed
+            initCharts();
+        }
+
+        function handleLogout() {
+            sessionStorage.removeItem("bm_authenticated");
+            window.location.reload();
+        }
+
+        // Standard Solution tabs workflow transitions
+        const tabs = document.querySelectorAll('.tab-btn');
+        const contents = document.querySelectorAll('.tab-content');
+
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                tabs.forEach(t => {
+                    t.classList.remove('active', 'text-white');
+                    t.classList.add('text-slate-400');
+                });
+                tab.classList.add('active', 'text-white');
+                tab.classList.remove('text-slate-400');
+
+                contents.forEach(c => c.classList.add('hidden'));
+                const targetId = tab.getAttribute('data-target');
+                document.getElementById(targetId).classList.remove('hidden');
+            });
+        });
+
+        // Interactive wedge analysis card events
+        const wedgeInsights = {
+            'compute': "Sales Target: Highlight that pure raw CPU computing nodes are commoditized. Persistent Data Fabrics establish deep customer retention.",
+            'notebook': "Sales Target: Address standard file scale bottlenecks. Enable simple query exports directly to isolated container structures.",
+            'enterprise': "Sales Target: Combat massive custom infrastructure costs. Standardize pre-configured GKE clusters instantly to eliminate manual setup.",
+            'tracking': "Sales Target: Leverage integration models. Utilize tracking frameworks to model physical missions inside standard browser interfaces."
+        };
+
+        function highlightWedge(type) {
+            const insightBox = document.getElementById('wedge-insight');
+            const insightText = document.getElementById('wedge-text');
+            
+            insightText.innerText = wedgeInsights[type];
+            insightBox.classList.remove('hidden');
+            
+            insightBox.classList.add('bg-blue-100');
+            setTimeout(() => {
+                insightBox.classList.remove('bg-blue-100');
+            }, 300);
+        }
+
+        // Isolated charting setup executed on portal unlock validation
+        let chartsInitialized = false;
+        function initCharts() {
+            if (chartsInitialized) return;
+            chartsInitialized = true;
+
+            // Historical projected bar diagram displaying correct compound calculations
+            const ctxRev = document.getElementById('revenueChart').getContext('2d');
+            new Chart(ctxRev, {
+                type: 'bar',
+                data: {
+                    labels: ['2026', '2027', '2028', '2029', '2030'],
+                    datasets: [{
+                        label: 'Projected Net Revenue ($M)',
+                        data: [1.2, 3.9, 13.6, 35.3, 75.1], // Dynamic values representing 181% CAGR growth paths
+                        backgroundColor: '#2563eb',
+                        hoverBackgroundColor: '#1d4ed8',
+                        borderRadius: 6,
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: { borderDash: [3, 6], color: '#f1f5f9' },
+                            ticks: { callback: function(val) { return '$' + val + 'M'; } }
+                        },
+                        x: {
+                            grid: { display: false }
+                        }
+                    }
+                }
+            });
+
+            // Target distribution breakdown chart
+            const ctxMkt = document.getElementById('marketChart').getContext('2d');
+            new Chart(ctxMkt, {
+                type: 'doughnut',
+                data: {
+                    labels: [
+                        'Maritime Undersea Defense', 
+                        'Oceanographic Research', 
+                        'Offshore Marine Wind/Energy', 
+                        'Deepwater Port Automation'
+                    ],
+                    datasets: [{
+                        data: [40, 25, 20, 15],
+                        backgroundColor: [
+                            '#0f172a', 
+                            '#2563eb', 
+                            '#06b6d4', 
+                            '#94a3b8'
+                        ],
+                        borderWidth: 1,
+                        borderColor: '#ffffff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '70%',
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 15,
+                                font: { size: 11, family: 'Inter' }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>
